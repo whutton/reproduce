@@ -1,0 +1,145 @@
+---
+output: html_document
+---
+R Programming Assignment
+================================
+
+```{r}
+library(dplyr)
+bdata <- read.csv("c:\\hutton\\r_reproduce\\activity.csv")
+zip2 <- group_by(bdata,date)
+zip2a <- group_by(bdata,date)
+zip3 <- summarise(zip2,step_cnt = sum(steps,na.rm = TRUE))
+daily <- summarise(zip2a,step_cnt = sum(steps,na.rm = TRUE),
+                   max1 = max(steps,na.rm=TRUE),
+                   mean = mean(steps,na.rm=TRUE),
+                   medium = median(steps[steps>0])
+                     )
+hist(daily$step_cnt)
+
+```
+
+
+Mean - medium
+```{r}
+print(tbl_df(daily[,c("date","mean","medium")]),n=100)
+```
+
+Average daily activity
+```{r}
+t1 <- group_by(bdata,interval)
+t2 <- summarise(t1,avg_period = mean(steps,na.rm=TRUE) )
+
+
+plot(t2$interval,t2$avg_period,type="l",xlab="Interval",ylab="All Days")
+
+```
+Period with the max average steps
+```{r}
+max_average <- subset(t2,avg_period==max(t2$avg_period,na.rm=TRUE))
+max_average
+```
+
+Number of Rows with Missing Values
+
+```{r}
+sum(!complete.cases(bdata))
+```
+
+Inputting Missing Values
+
+```{r}
+rows_in_data <- nrow(bdata)
+bdata1 <- bdata
+for ( i in 1:rows_in_data ) {
+	step_value <- bdata1[i,"steps"]
+	if (is.na(step_value)) {
+		missing_interval <- bdata1[i,"interval"]
+		value1 <- t2[which(t2$interval == missing_interval),2]
+		bdata1[i,"steps"] = value1
+      }
+}
+
+
+zip2a <- group_by(bdata1,date)
+zip3 <- summarise(zip2a,step_cnt = sum(steps,na.rm = TRUE))
+daily1 <- summarise(zip2a,step_cnt = sum(steps,na.rm = TRUE),
+                   max1 = max(steps,na.rm=TRUE),
+                   mean = mean(steps,na.rm=TRUE),
+                   medium = median(steps[steps>0])
+                     )
+hist(daily1$step_cnt)
+
+
+```
+Mean / Medium with filled out values
+
+```{r}
+print(tbl_df(daily1[,c("date","mean","medium")]),n=100)
+```
+### merge dataframes
+```{r}
+new_daily <- merge(daily,daily1,by ="date",all=TRUE)
+daily1[] <- lapply(daily1,as.character)
+
+```
+ 
+```{r sum_missing}
+sum_missing <- sum(new_daily$step_cnt.x,na.rm = TRUE)
+```
+
+```{r sum_avg}
+sum_avg <- sum(new_daily$step_cnt.y,na.rm = TRUE)
+```
+
+Total number of steps (with missing values) `r sum_missing`
+
+Total number of steps (with Average substitution) `r sum_avg`
+
+```{r}
+weekDay <- function(x) {
+	date1 <- weekdays(as.Date(x))
+	return_value <- "Weekday"
+	if (date1 == "Sunday") {
+		return_value <- "Weekend"
+	}
+	if (date1 == "Saturday") {
+		return_value <- "Weekend"
+	}
+	return_value
+}
+
+
+zip22 <- group_by(bdata1,interval)
+
+
+rows_in_data <- nrow(zip22)
+
+for ( i in 1:rows_in_data ) {
+	value1 <- weekDay(zip22[[i,"date"]])
+
+	zip22[i,"dayType"] = value1
+}
+
+zipWeekDay <- subset(zip22,dayType=="Weekday")
+zipWeekEnd <- subset(zip22,dayType=="Weekend")
+
+daily10 <- summarise(zipWeekDay,step_cnt = sum(steps,na.rm = TRUE),
+                   max1 = max(steps,na.rm=TRUE),
+                   mean = mean(steps,na.rm=TRUE),
+                   medium = median(steps[steps>0])
+                     )
+daily11 <- summarise(zipWeekEnd,step_cnt = sum(steps,na.rm = TRUE),
+                   max1 = max(steps,na.rm=TRUE),
+                   mean = mean(steps,na.rm=TRUE),
+                   medium = median(steps[steps>0])
+                     )
+
+par(mfrow=c(2,1))
+plot(daily10$interval,
+     daily10$mean,
+     type="l",xlab="Interval",ylab="All Weekdays")
+plot(daily11$interval,
+     daily11$mean,
+     type="l",xlab="Interval",ylab="All Weekends")
+```
